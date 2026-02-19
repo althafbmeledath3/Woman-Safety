@@ -204,8 +204,8 @@ def emergency(request):
         body = f"I am in danger, please help me! My location: {location_link}"
 
         EMAIL_HOST = 'smtp.gmail.com'
-        EMAIL_HOST_USER = 'althafbmeledath3@gmail.com'
-        EMAIL_HOST_PASSWORD = 'kmkd olus bvwf dqkm'
+        EMAIL_HOST_USER = 'mariyaann894@gmail.com'
+        EMAIL_HOST_PASSWORD = 'auru ctjv zfqo shni'
         EMAIL_PORT = 587
 
         all_sent = True
