@@ -1,0 +1,105 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Django tests",
+			"type": "shell",
+			"command": "./.venv/bin/python manage.py test",
+			"isBackground": false,
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Run Django tests",
+			"type": "shell",
+			"command": "./.venv/bin/python manage.py test",
+			"isBackground": false,
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Run Django tests",
+			"type": "shell",
+			"command": "./.venv/bin/python manage.py test",
+			"isBackground": false,
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Run Django tests",
+			"type": "shell",
+			"command": "./.venv/bin/python manage.py test",
+			"isBackground": false,
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Run Django tests",
+			"type": "shell",
+			"command": "./.venv/bin/python manage.py test",
+			"isBackground": false,
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Run Django tests",
+			"type": "shell",
+			"command": "./.venv/bin/python manage.py test",
+			"isBackground": false,
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Run Django tests",
+			"type": "shell",
+			"command": "./.venv/bin/python manage.py test",
+			"isBackground": false,
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Run Django tests",
+			"type": "shell",
+			"command": "./.venv/bin/python manage.py test",
+			"isBackground": false,
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Run Django tests",
+			"type": "shell",
+			"command": "./.venv/bin/python manage.py test",
+			"isBackground": false,
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Run Django tests",
+			"type": "shell",
+			"command": "./.venv/bin/python manage.py test",
+			"isBackground": false,
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		}
+	]
+}

@@ -154,9 +154,63 @@
 			<hr><br>
 		</div>
 
-		<a style="color:white; background-color:rgb(30,142,62);" class="btn btn-primary  btn-sm btn-block"
-			href="{% url 'main_app:create_contact' %}"><b>Create Contact</b></a>
-		<br>
+		<div style="display:flex; justify-content:center; gap:16px; margin-bottom:16px;">
+			<a style="color:white; background-color:rgb(30,142,62);" class="btn btn-primary btn-sm"
+				href="{% url 'main_app:create_contact' %}"><b>Create Contact</b></a>
+			<a style="color:white; background-color:rgb(217,48,37);" class="btn btn-danger btn-sm" href="/emergency"><b>EMERGENCY</b></a>
+			<button id="record-video-btn" class="btn btn-warning btn-sm"><b>Record Video</b></button>
+		</div>
+		<div id="video-controls" style="text-align:center; margin-bottom:16px; display:none;">
+			<button id="view-video-btn" class="btn btn-info btn-sm">View Your Video</button>
+		</div>
+		<div id="video-preview" style="text-align:center; margin-bottom:16px; display:none;"></div>
+			<script>
+			let mediaRecorder, recordedChunks = [], videoBlob;
+			const recordBtn = document.getElementById('record-video-btn');
+			const viewBtn = document.getElementById('view-video-btn');
+			const controls = document.getElementById('video-controls');
+			const preview = document.getElementById('video-preview');
+
+			recordBtn.onclick = async function() {
+				recordedChunks = [];
+				preview.style.display = 'none';
+				controls.style.display = 'none';
+				if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+					alert('Camera/microphone not supported.');
+					return;
+				}
+				try {
+					const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+					mediaRecorder = new MediaRecorder(stream);
+					mediaRecorder.ondataavailable = e => {
+						if (e.data.size > 0) recordedChunks.push(e.data);
+					};
+					mediaRecorder.onstop = () => {
+						videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+						controls.style.display = 'block';
+					};
+					mediaRecorder.start();
+					setTimeout(() => {
+						mediaRecorder.stop();
+						stream.getTracks().forEach(track => track.stop());
+					}, 15000);
+					alert('Recording started! Recording will stop automatically after 15 seconds.');
+				} catch (err) {
+					alert('Could not access camera/microphone.');
+				}
+			};
+
+			viewBtn.onclick = function() {
+				preview.innerHTML = '';
+				const video = document.createElement('video');
+				video.controls = true;
+				video.style.maxWidth = '100%';
+				video.src = URL.createObjectURL(videoBlob);
+				preview.appendChild(video);
+				preview.style.display = 'block';
+				video.play();
+			};
+			</script>
 		<div class="table-responsive text-nowrap">
 			<table class="table">
 				<thead class="thead" style="color:black; background-color:#E9ECEF; font-size:1.25rem;">

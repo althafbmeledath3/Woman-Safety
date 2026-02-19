@@ -14,12 +14,179 @@
 
 </head>
 
+
 <body style="height:1000px; max-width:100%; background-color:white;margin-top:60px;">
-    <div class="container" style="height:65%; max-width:100%">
 
-        <h1 style="color:rgb(217,48,37); text-align: center;"><b>EMERGENCY SITUATION!!</b></h1>
-
+    <div class="container" style="height:65%; max-width:100%; position:relative; z-index:1001;">
+        <div id="emergency-label-wrapper" style="display:flex; justify-content:center; align-items:center; margin-bottom:32px; margin-top:10px;">
+            <!-- <span id="emergency-label" style="
+                font-size:2.2rem;
+                font-weight:bold;
+                color:#fff;
+                background:linear-gradient(90deg, #d93025 80%, #fff 100%);
+                padding: 18px 36px;
+                border-radius: 12px;
+                box-shadow: 0 4px 24px rgba(217,48,37,0.18);
+                letter-spacing:2px;
+                z-index:1002;
+                border: 2px solid #b71c1c;
+                text-shadow: 1px 1px 6px #b71c1c, 0 0 2px #fff;
+                margin-top: 0;
+            ">EMERGENCY SITUATION!!</span> -->
+            <span id="emergency-label" style="
+    display: inline-block;
+    font-size: 2.2rem;
+    font-weight: bold;
+    color: #fff;
+    background: linear-gradient(90deg, #d93025 80%, #fff 100%);
+    padding: 18px 36px;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(217,48,37,0.18);
+    letter-spacing: 2px;
+    z-index: 1002;
+    border: 2px solid #b71c1c;
+    text-shadow: 1px 1px 6px #b71c1c, 0 0 2px #fff;
+    margin-top: 30px;
+">
+    EMERGENCY SITUATION!!
+</span>
+        </div>
+        <div style="text-align:center; margin-top:40px; display:flex; flex-direction:column; align-items:center; gap:18px;">
+            <button id="emergency-btn" class="btn btn-danger btn-lg" style="margin-bottom:8px;">Send Emergency Alert</button>
+            <span id="emergency-loading" style="display:none; margin-left:12px; vertical-align:middle;">
+                <span class="spinner-border spinner-border-sm text-danger" role="status" aria-hidden="true"></span>
+            </span>
+            <!-- <button id="record-video-btn" class="btn btn-warning btn-lg" style="background:#ff9800; color:#fff; font-weight:bold;"></button> -->
+            <button id="view-video-btn" class="btn btn-info btn-lg" style="display:none; margin-top:8px;"></button>
+            <video id="recorded-video" style="display:none; margin-top:16px; max-width:95vw; border:2px solid #d93025; border-radius:8px; background:#000;" controls></video>
+        </div>
     </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Video recording logic
+        let mediaRecorder;
+        let recordedChunks = [];
+        let videoBlob = null;
+        const recordBtn = document.getElementById('record-video-btn');
+        const viewBtn = document.getElementById('view-video-btn');
+        const videoElem = document.getElementById('recorded-video');
+
+        // Try to restore video from sessionStorage
+        if (window.sessionStorage.getItem('emergency_video')) {
+            videoBlob = new Blob([new Uint8Array(JSON.parse(window.sessionStorage.getItem('emergency_video')))], {type:'video/webm'});
+            viewBtn.style.display = 'inline-block';
+        }
+
+        if (recordBtn) {
+            recordBtn.onclick = async function() {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    showToast('Camera not supported on this device/browser.');
+                    return;
+                }
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    recordedChunks = [];
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+                    mediaRecorder.ondataavailable = function(e) {
+                        if (e.data.size > 0) recordedChunks.push(e.data);
+                    };
+                    mediaRecorder.onstop = function() {
+                        videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+                        // Store in sessionStorage as array buffer (for demo, not persistent)
+                        videoBlob.arrayBuffer().then(buf => {
+                            window.sessionStorage.setItem('emergency_video', JSON.stringify(Array.from(new Uint8Array(buf))));
+                            viewBtn.style.display = 'inline-block';
+                        });
+                        showToast('Recording complete!');
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+                    mediaRecorder.start();
+                    showToast('Recording started (max 15s)...');
+                    setTimeout(() => {
+                        if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+                    }, 15000);
+                } catch (err) {
+                    showToast('Camera access denied or error: ' + err.message);
+                }
+            };
+        }
+
+        if (viewBtn) {
+            viewBtn.onclick = function() {
+                if (!videoBlob && window.sessionStorage.getItem('emergency_video')) {
+                    videoBlob = new Blob([new Uint8Array(JSON.parse(window.sessionStorage.getItem('emergency_video')))], {type:'video/webm'});
+                }
+                if (videoBlob) {
+                    videoElem.src = URL.createObjectURL(videoBlob);
+                    videoElem.style.display = 'block';
+                    videoElem.play();
+                }
+            };
+        }
+
+        function showToast(msg) {
+            let toast = document.createElement('div');
+            toast.innerText = msg;
+            toast.style.position = 'fixed';
+            toast.style.bottom = '30px';
+            toast.style.left = '50%';
+            toast.style.transform = 'translateX(-50%)';
+            toast.style.background = '#28a745';
+            toast.style.color = 'white';
+            toast.style.padding = '16px 32px';
+            toast.style.borderRadius = '8px';
+            toast.style.zIndex = 9999;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3500);
+        }
+
+        const emergencyBtn = document.getElementById('emergency-btn');
+        const emergencyLoading = document.getElementById('emergency-loading');
+        if (emergencyBtn) {
+            emergencyBtn.onclick = function() {
+                if (!navigator.geolocation) {
+                    showToast('Geolocation is not supported by your browser');
+                    return;
+                }
+                if (emergencyLoading) emergencyLoading.style.display = 'inline-block';
+                emergencyBtn.disabled = true;
+                navigator.geolocation.getCurrentPosition(function(pos) {
+                    fetch('/emergency/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: JSON.stringify({
+                            lat: pos.coords.latitude,
+                            lng: pos.coords.longitude
+                        })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (emergencyLoading) emergencyLoading.style.display = 'none';
+                        emergencyBtn.disabled = false;
+                        if (data.success) {
+                            showToast('Emergency alert sent!');
+                        } else {
+                            showToast('Failed to send alert: ' + (data.error || 'Unknown error'));
+                        }
+                    })
+                    .catch(() => {
+                        if (emergencyLoading) emergencyLoading.style.display = 'none';
+                        emergencyBtn.disabled = false;
+                        showToast('Failed to send alert');
+                    });
+                }, function() {
+                    if (emergencyLoading) emergencyLoading.style.display = 'none';
+                    emergencyBtn.disabled = false;
+                    showToast('Location permission denied');
+                });
+            };
+        }
+    });
+    </script>
 </body>
 
 {% endblock %}

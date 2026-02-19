@@ -1,3 +1,62 @@
+def delete_account(request, username):
+    try:
+        user = User.objects.get(username=username)
+        user.delete()
+        messages.success(
+            request, user.username + ", Your account is deleted successfully!"
+        )
+    except User.DoesNotExist:
+        messages.error(request, "User doesnot exist")
+    return redirect("main_app:home")
+def login_request(request):
+    form = LoginForm(request.POST)
+    username = request.POST.get("Username_or_Email")
+    password = request.POST.get("password")
+    if request.method == "POST":
+        # Allow sign in using just username/email and password (no CAPTCHA)
+        if username and password:
+            # Authenticate by username
+            if User.objects.filter(username=username).exists():
+                user = auth.authenticate(username=username, password=password)
+                if user:
+                    if user.is_active:
+                        login(request, user)
+                        messages.success(
+                            request,
+                            "Welcome, " + user.username + " you are now logged in",
+                        )
+                        return redirect("main_app:home")
+                    else:
+                        messages.error(request, "Account is not active, please check your email")
+                else:
+                    messages.error(request, "Invalid username or password")
+            # Authenticate by email
+            elif User.objects.filter(email=username).exists():
+                user_obj = User.objects.get(email=username)
+                user = auth.authenticate(username=user_obj.username, password=password)
+                if user:
+                    if user.is_active:
+                        login(request, user)
+                        messages.success(
+                            request,
+                            "Welcome, " + user.username + " you are now logged in",
+                        )
+                        return redirect("main_app:home")
+                    else:
+                        messages.error(request, "Account is not active, please check your email")
+                else:
+                    messages.error(request, "Invalid username or password")
+            else:
+                messages.error(request, "Invalid username or password")
+                return redirect("main_app:login")
+        else:
+            messages.error(request, "Please enter username/email and password")
+    form = LoginForm()
+    return render(request, "main_app/login.html", {"form": form})
+def logout_request(request):
+    logout(request)
+    messages.info(request, "Logged out successfully!")
+    return redirect("main_app:home")
 from django.shortcuts import render, redirect
 from django.contrib.auth.forms import (
     PasswordChangeForm,
@@ -118,117 +177,55 @@ class VerificationView(View):
         return redirect("main_app:login")
 
 
-def logout_request(request):
-    logout(request)
-    messages.info(request, "Logged out successfully!")
-    return redirect("main_app:home")
+from django.views.decorators.csrf import csrf_exempt
+import json
 
-
-def delete_account(request, username):
-    try:
-        user = User.objects.get(username=username)
-        user.delete()
-        messages.success(
-            request, user.username + ", Your account is deleted successfully!"
-        )
-
-    except User.DoesNotExist:
-        messages.error(request, "User doesnot exist")
-
-    return redirect("main_app:home")
-
-
-def login_request(request):
-    form = LoginForm(request.POST)
-    username = request.POST.get("Username_or_Email")
-    password = request.POST.get("password")
-    if request.method == "POST":
-        recaptcha_response = request.POST.get("g-recaptcha-response")
-        url = "https://www.google.com/recaptcha/api/siteverify"
-        values = {
-            "secret": settings.GOOGLE_RECAPTCHA_SECRET_KEY,
-            "response": recaptcha_response,
-        }
-        data = urllib.parse.urlencode(values).encode()
-        req = urllib.request.Request(url, data=data)
-        response = urllib.request.urlopen(req)
-        result = json.loads(response.read().decode())
-        if result["success"]:
-            if username and password:
-                if User.objects.filter(username=username).exists():
-                    user = auth.authenticate(username=username, password=password)
-                    if user:
-                        if user.is_active:
-                            login(request, user)
-                            messages.success(
-                                request,
-                                "Welcome, " + user.username + " you are now logged in",
-                            )
-                            return redirect("main_app:home")
-
-                    messages.error(
-                        request, "Account is not active,please check your email"
-                    )
-
-                elif User.objects.filter(email=username).exists():
-                    user = User.objects.get(email=username)
-                    user = auth.authenticate(username=user.username, password=password)
-                    if user:
-                        if user.is_active:
-                            login(request, user)
-                            messages.success(
-                                request,
-                                "Welcome, " + user.username + " you are now logged in",
-                            )
-                            return redirect("main_app:home")
-
-                    messages.error(
-                        request, "Account is not active,please check your email"
-                    )
-
-                else:
-                    messages.error(request, "Invalid username or password")
-                    return redirect("main_app:login")
-        else:
-            messages.error(request, "Invalid reCAPTCHA. Please try again.")
-
-    form = LoginForm()
-    return render(request, "main_app/login.html", {"form": form})
-
-
-def emergency_contact(request):
-    users = User.objects.all()
-    curr = 0
-    for user in users:
-        if request.user.is_authenticated:
-            curr = user
-            break
-    if curr == 0:
+@csrf_exempt
+def emergency(request):
+    if not request.user.is_authenticated:
         return redirect("main_app:login")
-    contacts = contact.objects.filter(user=request.user)
-    total_contacts = contacts.count()
-    context = {
-        "contacts": contacts,
-        "total_contacts": total_contacts,
-        "user": request.user,
-    }
-    return render(request, "main_app/emergency_contact.html", context)
-
-
-def create_contact(request):
-    inst = contact(user=request.user)
-    form = ContactForm(instance=inst)
     if request.method == "POST":
-        form = ContactForm(request.POST, instance=inst)
-        if form.is_valid():
-            form.save()
-            messages.info(request, "New contact created successfully!!")
-            messages.info(request, "An email has been sent to your contact!!")
-            return redirect("main_app:emergency_contact")
-        messages.error(request, "Invalid username or password")
-    
-    
-    return render(request, "main_app/create_contact.html", {'form':form, 'recaptcha_site_key':settings.GOOGLE_RECAPTCHA_SITE_KEY})
+        try:
+            data = json.loads(request.body.decode())
+            lat = data.get("lat")
+            lng = data.get("lng")
+            if not lat or not lng:
+                return JsonResponse({"success": False, "error": "Location not provided"})
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
+
+        contacts = contact.objects.filter(user=request.user)
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+
+        subject = "EMERGENCY: I am in danger!"
+        location_link = f"http://www.google.com/maps/place/{lat},{lng}"
+        body = f"I am in danger, please help me! My location: {location_link}"
+
+        EMAIL_HOST = 'smtp.gmail.com'
+        EMAIL_HOST_USER = 'althafbmeledath3@gmail.com'
+        EMAIL_HOST_PASSWORD = 'kmkd olus bvwf dqkm'
+        EMAIL_PORT = 587
+
+        all_sent = True
+        for c in contacts:
+            msg = MIMEMultipart()
+            msg['From'] = EMAIL_HOST_USER
+            msg['To'] = c.email
+            msg['Subject'] = subject
+            msg.attach(MIMEText(body, 'plain'))
+            try:
+                server = smtplib.SMTP(EMAIL_HOST, EMAIL_PORT)
+                server.starttls()
+                server.login(EMAIL_HOST_USER, EMAIL_HOST_PASSWORD)
+                server.sendmail(EMAIL_HOST_USER, c.email, msg.as_string())
+                server.quit()
+            except Exception as e:
+                all_sent = False
+        return JsonResponse({"success": all_sent})
+    else:
+        return render(request, "main_app/emergency.html")
     
 
 
@@ -265,39 +262,31 @@ def delete_contact(request, pk):
     return render(request, "main_app/delete_contact.html", context)
 
 
-def emergency(request):
-    users = User.objects.all()
-    curr = 0
-    for user in users:
-        if request.user.is_authenticated:
-            curr = user
-            break
-    if curr == 0:
+def emergency_contact(request):
+    if not request.user.is_authenticated:
         return redirect("main_app:login")
     contacts = contact.objects.filter(user=request.user)
-    total_contacts = contacts.count()
-    context = {
+    return render(request, "main_app/emergency_contact.html", {
         "contacts": contacts,
-        "total_contacts": total_contacts,
+        "total_contacts": contacts.count(),
         "user": request.user,
-    }
-    emails, mobile_numbers = [], []
-    for j in contacts:
-        emails.append(j._meta.get_field("email"))
-        mobile_numbers.append(str(j.mobile_no).replace(" ", ""))
-    name = request.user.username
-    link = "http://www.google.com/maps/place/" + lat + "," + log
-    for c in contacts:
-        send_email(name, c.email, link)
-        messages.success(request,f"Email deleiverd to {name} at {c.email}")
-    try:
-        send_whatsapp(mobile_numbers, name, link)
-        messages.success(request,f"Message deleivered to {name} at {mobile_numbers}")
-    except:  # noqa
-        messages.error(
-            request, "your contact numbers contains number without country code."
-        )
-    return render(request, "main_app/emergency_contact.html", context)
+    })
+
+
+def create_contact(request):
+    if not request.user.is_authenticated:
+        return redirect("main_app:login")
+    if request.method == "POST":
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            contact_obj = form.save(commit=False)
+            contact_obj.user = request.user
+            contact_obj.save()
+            messages.success(request, f"Contact {contact_obj.name} created successfully!")
+            return redirect("main_app:emergency_contact")
+    else:
+        form = ContactForm()
+    return render(request, "main_app/create_contact.html", {"form": form})
 
 
 def change_password(request):
