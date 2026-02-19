@@ -140,3 +140,4 @@ cython_debug/
 
 # whatsapp database
 pywhatkit_dbs.txt
+db.sqlite3
